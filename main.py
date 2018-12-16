@@ -11,6 +11,12 @@ from running_state import ZFilter
 from torch.autograd import Variable
 from trpo import trpo_step
 from utils import *
+import logger
+
+
+def get_exp_name(exp_name, env_name, seed):
+    return "experiments/{}/{}".format(env_name, exp_name + '_seed' + str(seed))
+
 
 torch.utils.backcompat.broadcast_warning.enabled = True
 torch.utils.backcompat.keepdim_warning.enabled = True
@@ -22,6 +28,8 @@ parser.add_argument('--gamma', type=float, default=0.995, metavar='G',
                     help='discount factor (default: 0.995)')
 parser.add_argument('--env-name', default="Reacher-v1", metavar='G',
                     help='name of the environment to run')
+parser.add_argument('--exp-name', default="trpo-exp", metavar='G',
+                    help='name of the experiment')
 parser.add_argument('--tau', type=float, default=0.97, metavar='G',
                     help='gae (default: 0.97)')
 parser.add_argument('--l2-reg', type=float, default=1e-3, metavar='G',
@@ -40,6 +48,7 @@ parser.add_argument('--log-interval', type=int, default=1, metavar='N',
                     help='interval between training status logs (default: 10)')
 args = parser.parse_args()
 
+logger.configure(get_exp_name(args.exp_name, args.env_name, args.seed))
 env = gym.make(args.env_name)
 
 num_inputs = env.observation_space.shape[0]
@@ -172,6 +181,12 @@ for i_episode in count(1):
     batch = memory.sample()
     update_params(batch)
 
+    logger.clear_tabular()
+    logger.record_tabular('Iteration', i_episode)
+    logger.record_tabular('AverageReturn', reward_batch)
+    logger.record_tabular('LastReward', reward_sum)
+    logger.dump_tabular()
+
     if i_episode % args.log_interval == 0:
-        print('Episode {}\tLast reward: {}\tAverage reward {:.2f}'.format(
+        logger.info('Episode {}\tLast reward: {}\tAverage reward {:.2f}'.format(
             i_episode, reward_sum, reward_batch))
