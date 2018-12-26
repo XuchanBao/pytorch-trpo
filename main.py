@@ -142,6 +142,7 @@ def update_params(batch):
 running_state = ZFilter((num_inputs,), clip=5)
 running_reward = ZFilter((1,), demean=False, clip=10)
 
+total_steps = 0
 for i_episode in count(1):
     memory = Memory()
 
@@ -173,10 +174,11 @@ for i_episode in count(1):
                 break
 
             state = next_state
-        num_steps += (t-1)
+        num_steps += t + 1
         num_episodes += 1
         reward_batch += reward_sum
 
+    total_steps += num_steps
     reward_batch /= num_episodes
     batch = memory.sample()
     update_params(batch)
@@ -184,7 +186,7 @@ for i_episode in count(1):
     logger.clear_tabular()
     logger.record_tabular('Iteration', i_episode)
     logger.record_tabular('AverageReturn', reward_batch)
-    logger.record_tabular('LastReward', reward_sum)
+    logger.record_tabular('TotalSamples', total_steps)
     logger.dump_tabular()
 
     if i_episode % args.log_interval == 0:
